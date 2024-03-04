@@ -223,6 +223,8 @@ namespace Cooking.Service.API.Controllers
         [Route("UpsertRecipe")]
         public ResponseDTO UpsertRecipe([FromBody] RecipeDTO recipeDTO)
         {
+            //This operation should take place in a transaction scope
+            using var transaction = _db.Database.BeginTransaction();
             try
             {
                 recipeDTO.Name = recipeDTO.Name.Trim(); //Get rid of leading and trailing spaces 
@@ -250,10 +252,26 @@ namespace Cooking.Service.API.Controllers
                 if (existingRecipe == null)
                 {
                     Recipe recipe = _mapper.Map<Recipe>(recipeDTO);
+                    
+                    
                     //add recipe
                     _db.Recipe.Add(recipe);
-                    _db.SaveChanges();
-                    //TODO:Also add recipe ingredients if they are provided. If you require me to include how this would work please let me know but I do think its overkill for this exercise
+                    _db.SaveChanges(); //This is done to be able to get a RecipeId for the child elements
+                    foreach (RecipeIngredientDTO recipeIngredientDTO in recipeDTO.RecipeIngredients)
+                    {
+                        //We need to include the RecipeId So the mapping needs to be as follow:
+                        RecipeIngredient recipeIngredient = new RecipeIngredient();
+                        recipeIngredient.RecipeId = recipe.Id;
+                        //This needs to be validated before the recipe gets created
+                        recipeIngredient.Name = recipeIngredient.Name;
+                        //This needs to be validated before the recipe gets created
+                        recipeIngredient.Amount = recipeIngredient.Amount;
+                        _db.Add(recipeIngredient);
+                        _db.SaveChanges();
+                        //Map the new recipe ingredient back to the DTO
+                        recipeIngredientDTO.Id = recipeIngredient.Id;
+                    }
+
                     _response.Result = _mapper.Map<RecipeDTO>(recipe);
 
                 }
@@ -262,14 +280,69 @@ namespace Cooking.Service.API.Controllers
                     existingRecipe.Name = recipeDTO.Name;
                     existingRecipe.Portions = recipeDTO.Portions;
                     _db.Recipe.Update(existingRecipe);
-                    _db.SaveChanges();
-                    _response.Result = _mapper.Map<RecipeDTO>(existingRecipe);
-                    //TODO:Also update recipe ingredients if they are provided. If you require me to include how this would work please let me know but I do think its overkill for this exercise
-                }
+                    foreach (RecipeIngredientDTO recipeIngredientDTO in recipeDTO.RecipeIngredients)
+                    {
+                        //We need to determine if there is already a recipe ingredient
+                        RecipeIngredient existingRecipeIngredient = _db.RecipeIngredients.FirstOrDefault(c=> c.Id== recipeIngredientDTO.Id);
+                        if(existingRecipeIngredient == null) 
+                        {
+                            RecipeIngredient recipeIngredient = new RecipeIngredient();
+                            recipeIngredient.RecipeId = existingRecipe.Id;
 
+                            //We can't have a recipe ingedient with the same name listed somewhere else on the recipe
+                            RecipeIngredient otherRecipeIngredient = _db.RecipeIngredients.FirstOrDefault(c=> c.Name.ToLower() == recipeIngredientDTO.Name.ToLower() && c.RecipeId == existingRecipe.Id && recipeIngredientDTO.Id != recipeIngredientDTO.Id);
+                            if(otherRecipeIngredient != null)
+                            {
+                                throw new Exception("The recipe already contains an ingredient with this name");
+                            }
+                            //I do this for my own sanity
+                            otherRecipeIngredient = null;
+
+                            recipeIngredient.Name = recipeIngredientDTO.Name;
+                            //This needs to be validated before the recipe gets created/updated
+                            if(recipeIngredientDTO.Amount <= 0)
+                            {
+                                throw new Exception("The recipe ingredient amount must be greater than zero");
+                            }
+
+                            recipeIngredient.Amount = recipeIngredientDTO.Amount;
+                            _db.Add(recipeIngredient);
+                            _db.SaveChanges();
+                            //Map the new recipe ingredient back to the DTO
+                            recipeIngredientDTO.Id = recipeIngredient.Id;
+                        }
+                        else
+                        {
+                            //We can't have a recipe ingedient with the same name listed somewhere else on the recipe
+                            RecipeIngredient otherRecipeIngredient = _db.RecipeIngredients.FirstOrDefault(c => c.Name.ToLower() == recipeIngredientDTO.Name.ToLower() && c.RecipeId == existingRecipe.Id && recipeIngredientDTO.Id != recipeIngredientDTO.Id);
+                            if (otherRecipeIngredient != null)
+                            {
+                                throw new Exception("The recipe already contains an ingredient with this name");
+                            }
+                            //I do this for my own sanity
+                            otherRecipeIngredient = null;
+
+                            existingRecipeIngredient.Name = recipeIngredientDTO.Name;
+
+                            if (recipeIngredientDTO.Amount <= 0)
+                            {
+                                throw new Exception("The recipe ingredient amount must be greater than zero");
+                            }
+
+                            existingRecipeIngredient.Amount = recipeIngredientDTO.Amount;
+                            _db.Update(existingRecipeIngredient);
+                            _db.SaveChanges();
+                        }
+
+                    }
+                    _response.Result = _mapper.Map<RecipeDTO>(existingRecipe);
+                }
+                //We commit the transaction
+                transaction.Commit();
             }
             catch (Exception ex)
             {
+                transaction.Rollback();
                 _response.IsSuccess = false;
                 _response.Message = ex.Message;
             }
