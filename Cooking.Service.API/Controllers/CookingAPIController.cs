@@ -263,9 +263,9 @@ namespace Cooking.Service.API.Controllers
                         RecipeIngredient recipeIngredient = new RecipeIngredient();
                         recipeIngredient.RecipeId = recipe.Id;
                         //This needs to be validated before the recipe gets created
-                        recipeIngredient.Name = recipeIngredient.Name;
+                        recipeIngredient.Name = recipeIngredientDTO.Name;
                         //This needs to be validated before the recipe gets created
-                        recipeIngredient.Amount = recipeIngredient.Amount;
+                        recipeIngredient.Amount = recipeIngredientDTO.Amount;
                         _db.Add(recipeIngredient);
                         _db.SaveChanges();
                         //Map the new recipe ingredient back to the DTO
