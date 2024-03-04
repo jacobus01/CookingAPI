@@ -43,6 +43,23 @@ namespace Cooking.Service.API.Controllers
         }
 
         [HttpGet]
+        [Route("GetRecipeIngredientsByRecipeID/{recipeId:int}")]
+        public ResponseDTO GetRecipeIngredientsByRecipeID(int recipeId)
+        {
+            try
+            {
+                IEnumerable<RecipeIngredient> objList = _db.RecipeIngredients.Where(c=> c.RecipeId == recipeId) .ToList();
+                _response.Result = _mapper.Map<IEnumerable<RecipeIngredientDTO>>(objList);
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message;
+            }
+            return _response;
+        }
+
+        [HttpGet]
         [Route("GetRecipes")]
         public ResponseDTO GetRecipes()
         {
