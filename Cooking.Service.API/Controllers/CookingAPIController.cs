@@ -307,7 +307,6 @@ namespace Cooking.Service.API.Controllers
         {
             try
             {
-                //Convert the name to lower case to eliminate casing issues
                 Recipe obj = _db.Recipe.FirstOrDefault(c => c.Id == id);
                 if (obj == null)
                 {
@@ -332,5 +331,56 @@ namespace Cooking.Service.API.Controllers
             }
             return _response;
         }
+        [HttpDelete]
+        [Route("DeleteRecipeIngredientById/{id:int}")]
+        public ResponseDTO DeleteRecipeIngredientById(int id)
+        {
+            try
+            {
+                RecipeIngredient obj = _db.RecipeIngredients.FirstOrDefault(c => c.Id == id);
+                if (obj == null)
+                {
+                    throw new Exception("No recipe ingredient by that Id could be found");
+                }
+
+
+                //Delete the recipe ingredient
+                _db.RecipeIngredients.Remove(obj);
+                _db.SaveChanges();
+
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message;
+            }
+            return _response;
+        }
+        [HttpDelete]
+        [Route("DeleteIngredientById/{id:int}")]
+        public ResponseDTO DeleteIngredientById(int id)
+        {
+            try
+            {
+                IngredientAvailability obj = _db.Ingredients.FirstOrDefault(c => c.Id == id);
+                if (obj == null)
+                {
+                    throw new Exception("No ingredient by that Id could be found");
+                }
+
+
+                //Delete the ingredient
+                _db.Ingredients.Remove(obj);
+                _db.SaveChanges();
+
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message;
+            }
+            return _response;
+        }
+
     }
 }
