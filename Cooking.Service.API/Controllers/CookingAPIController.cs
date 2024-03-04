@@ -41,10 +41,26 @@ namespace Cooking.Service.API.Controllers
             }
             return _response;
         }
+        [HttpGet]
+        [Route("GetRecipeIngredientById/{id:int}")]
+        public ResponseDTO GetRecipeIngredientById(int id)
+        {
+            try
+            {
+                RecipeIngredient obj = _db.RecipeIngredients.FirstOrDefault(c => c.Id == id);
+                _response.Result = _mapper.Map<RecipeIngredientDTO>(obj);
+            }
+            catch (Exception ex)
+            {
+                _response.IsSuccess = false;
+                _response.Message = ex.Message;
+            }
+            return _response;
+        }
 
         [HttpGet]
-        [Route("GetRecipeIngredientsByRecipeID/{recipeId:int}")]
-        public ResponseDTO GetRecipeIngredientsByRecipeID(int recipeId)
+        [Route("GetRecipeIngredientsByRecipeId/{recipeId:int}")]
+        public ResponseDTO GetRecipeIngredientsByRecipeId(int recipeId)
         {
             try
             {
